@@ -134,7 +134,7 @@ def get_signature(data: str, key: str) -> str:
 NO_SIGN_REQUESTS = ["encrypted", "util.getSI", "util.crypto.getRSAPub", "ping"]
 
 
-def sign_request(data: dict, sign_key: str | None) -> str:
+def sign_request(data: dict, sign_key: Optional[str]) -> str:
     """
     对请求数据签名（如果需要）
     
@@ -610,5 +610,6 @@ async def process_fnos():
 
 if __name__ == "__main__":
     asyncio.run(process_fnos())
+
 
 
