@@ -22,11 +22,13 @@ RUN pip install --no-cache-dir -r requirements.txt
 COPY zspace.py .
 COPY func.py .
 COPY ugreen.py .
+COPY fnos.py .
 COPY start.py .
 
 # 设置默认环境变量
 ENV ZSPACE_CONFIGS='[]'
 ENV UGREEN_CONFIGS='[]'
+ENV FNOS_CONFIGS='[]'
 ENV WXPUSH_SPT=''
 ENV INTERVAL_MINUTES=5
 
