@@ -1,5 +1,6 @@
 import requests
 import json
+import warnings
 from Crypto.PublicKey import RSA
 from Crypto.Cipher import PKCS1_v1_5
 import base64
@@ -9,7 +10,10 @@ import re
 import traceback
 import socket
 
-# os.environ['WXPUSH_SPT'] = 'xxxxxxxxxx'
+# 忽略InsecureRequestWarning警告
+warnings.filterwarnings("ignore", category=requests.packages.urllib3.exceptions.InsecureRequestWarning)
+
+# os.environ['WXPUSH_SPT'] = 'xxxxxxxxxxxxxxxxx'
 WXPUSH_SPT = os.getenv('WXPUSH_SPT', '')
 ####拆分ip和端口
 def split_ip_port(ip_port, default_port=None):
@@ -69,11 +73,12 @@ def check_port_open(ip, port, timeout=2):
         return False
 
 ####绿联获取鉴权
-def get_token(username, ip, port):
+def get_token(username, ip, port, use_ssl):
     """
     获取绿联设备 token
     :param username: 用户名
     :param ip_port: 目标 IP 和端口，格式为 ip:port
+    :param use_ssl: 是否使用 HTTPS
     :return: token 或 None
     """
     headers = {
@@ -82,11 +87,13 @@ def get_token(username, ip, port):
     }
     data = {"username": username}
     headers = {"Content-Type": "application/json"}
+    protocol = "https" if use_ssl else "http"
     try:
         response = requests.post(
-            f"http://{ip}:{port}/ugreen/v1/verify/check?token=",
+            f"{protocol}://{ip}:{port}/ugreen/v1/verify/check?token=",
             json=data,
-            timeout=10
+            timeout=10,
+            verify=False
         )
         response.raise_for_status()
         return response.headers.get("X-Rsa-Token")
@@ -120,23 +127,26 @@ def jiami(encoded_str,text_to_encrypt):
     # Remove the test block and directly call the encryption function
     encrypted_result = encrypt_with_public_key(decoded_str, text_to_encrypt)
     return encrypted_result
-def login(username,  ip, port, password):
+def login(username,  ip, port, password, use_ssl):
     """
     登录绿联设备
     :param username: 用户名
     :param ip_port: 目标 IP 和端口，格式为 ip:port
     :param password: 密码
+    :param use_ssl: 是否使用 HTTPS
     :return: 登录响应的 JSON 数据
     """
     headers = {
         "x-specify-language": "zh-CN"
     }
     data = {"username": username, "password": password, "keepalive": True, "is_simple": True}
+    protocol = "https" if use_ssl else "http"
     try:
         response = requests.post(
-            f"http://{ip}:{port}/ugreen/v1/verify/login",
+            f"{protocol}://{ip}:{port}/ugreen/v1/verify/login",
             json=data,
-            timeout=10
+            timeout=10,
+            verify=False
         )
         response.raise_for_status()
         return response.json()
@@ -146,12 +156,13 @@ def login(username,  ip, port, password):
         return {}
 
 ####绿联通知
-def ugreen_notify(token_id, token,  ip, port):
+def ugreen_notify(token_id, token,  ip, port, use_ssl):
     """
     获取绿联设备通知
     :param token_id: token ID
     :param token: token
     :param ip_port: 目标 IP 和端口，格式为 ip:port
+    :param use_ssl: 是否使用 HTTPS
     :return: 通知响应的 JSON 数据
     """
     headers = {
@@ -160,12 +171,14 @@ def ugreen_notify(token_id, token,  ip, port):
         "x-ugreen-token": token
     }
     data = {"level": ["info", "important", "warning"], "page": 1, "size": 10}
+    protocol = "https" if use_ssl else "http"
     try:
         response = requests.post(
-            f"http://{ip}:{port}/ugreen/v1/desktop/message/list",
+            f"{protocol}://{ip}:{port}/ugreen/v1/desktop/message/list",
             json=data,
             headers=headers,
-            timeout=10
+            timeout=10,
+            verify=False
         )
         response.raise_for_status()
         return response.json()
@@ -281,11 +294,12 @@ def get_last_zspace_timestamp(FILE_PATH):
     # 将最大时间转换为时间戳
     return max_time.timestamp()
 
-def zspace_notify(cookie,  ip, port):
+def zspace_notify(cookie,  ip, port, use_ssl):
     """
     获取极空间设备通知
     :param cookie: 认证 cookie
     :param ip_port: 目标 IP 和端口，格式为 ip:port
+    :param use_ssl: 是否使用 HTTPS
     :return: 通知响应的 JSON 数据
     """
     headers = {
@@ -296,10 +310,12 @@ def zspace_notify(cookie,  ip, port):
         "type": "notify",
         "num": 10
     }
+    protocol = "https" if use_ssl else "http"
     try:
         response = requests.post(
-            f"http://{ip}:{port}/action/list",
-            data=data, headers=headers, timeout=10
+            f"{protocol}://{ip}:{port}/action/list",
+            data=data, headers=headers, timeout=10,
+            verify=False
         )
         return response.json()
     except Exception as e:

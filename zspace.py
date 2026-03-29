@@ -1,10 +1,11 @@
 from func import *
 # 从环境变量获取配置
-# os.environ['UGREEN_CONFIGS'] =  ''' [
+# os.environ['ZSPACE_CONFIGS'] =  ''' [
 #             {
-#                 "ip_port": "192.168.33.11:5055", 
-#                 "cookie": "xxxxxxxxx",
-#                 "notify_type_name": "极空间z4pro"
+#                 "ip_port": "192.168.44.55:5056", 
+#                 "cookie": "xxxxxxxxxxxxxxxxxxx",
+#                 "notify_type_name": "极空间z4pro",
+#                 "use_ssl": true
 #             }
 #          ]'''
 zspace_configs_str = os.getenv('ZSPACE_CONFIGS', '[]').strip()
@@ -18,13 +19,14 @@ def process_zspace():
         cookie = config.get('cookie')
         ip_port = config.get('ip_port')
         notify_type_name = config.get('notify_type_name')
+        use_ssl = config.get('use_ssl', False)
         ip, port = split_ip_port(ip_port, 5055)
         if not check_port_open(ip,port):
             print(f"IP: {ip}, 端口: {port} 不通，跳过此次循环")
             continue    
         file_path = os.path.join(log_dir, f"{ip}_{port}.log")
         try:
-            response = zspace_notify(cookie, ip, port)
+            response = zspace_notify(cookie, ip, port, use_ssl)
             notice_list = response.get('data', {}).get('list', [])
             last_timestamp = get_last_zspace_timestamp(file_path)
             new_notices = []

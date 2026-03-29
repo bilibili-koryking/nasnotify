@@ -2,25 +2,26 @@ from func import *
 
 # os.environ['UGREEN_CONFIGS'] =  ''' [
 #             {
+#                 "ip_port": "192.168.44.22:9999", 
+#                 "username": "koryking", 
+#                 "password": "xxxxxxxxxxx", 
+#                 "notify_type_name": "绿联云4300P",
+#             },
+#             {
 #                 "ip_port": "192.168.44.23:9999", 
 #                 "username": "koryking", 
-#                 "password": "xxxxxxxxx", 
-#                 "notify_type_name": "绿联云4300P"
+#                 "password": "xxxxxxxxxxx", 
+#                 "notify_type_name": "绿联云4800",
 #             },
 #             {
-#                 "ip_port": "192.168.44.23:9999",
+#                 "ip_port": "192.168.44.45:9443", 
 #                 "username": "koryking", 
-#                 "password": "xxxxxxxxx", 
-#                 "notify_type_name": "绿联云4800"
-#             },
-#             {
-#                 "ip_port": "192.168.22.13:9999",
-#                 "username": "koryking", 
-#                 "password": "xxxxxxxxx", 
-#                 "notify_type_name": "绿联云6800pro"
+#                 "password": "xxxxxxxxxxx", 
+#                 "notify_type_name": "绿联云6800",
+#                 "use_ssl": true
 #             }
 #          ]'''
-# 从环境变量获取配置
+#从环境变量获取配置
 UGREEN_CONFIGS_STR = os.getenv('UGREEN_CONFIGS', '[]').strip()
 UGREEN_CONFIGS = json.loads(UGREEN_CONFIGS_STR)
 
@@ -33,6 +34,7 @@ def process_ugreen():
         username = config.get('username')
         ip_port = config.get('ip_port')
         notify_type_name = config.get('notify_type_name')
+        use_ssl = config.get('use_ssl', False)
         ip, port = split_ip_port(ip_port, 9999)
         if not check_port_open(ip, port):
             print(f"IP: {ip}, 端口: {port} 不通，跳过此次循环")
@@ -48,8 +50,8 @@ def process_ugreen():
                 token = auth_info['token']
             else:
                 # 没有保存的鉴权信息，进行首次鉴权
-                token = get_token(username, ip, port)
-                login_result = login(username, ip, port, jiami(token, password))
+                token = get_token(username, ip, port, use_ssl)
+                login_result = login(username, ip, port, jiami(token, password), use_ssl)
                 public_key = login_result['data']['public_key']
                 token = login_result['data']['token']
                 token = jiami(public_key, token)
@@ -57,18 +59,18 @@ def process_ugreen():
                 save_auth_info(ip, port, {'token_id': token_id, 'token': token})
 
             # 只调用一次 ugreen_notify
-            response_data = ugreen_notify(token_id, token, ip, port)
+            response_data = ugreen_notify(token_id, token, ip, port, use_ssl)
             if response_data.get('code') != 200:
                 # code 不为 200，重新鉴权
-                token = get_token(username, ip, port)
-                login_result = login(username, ip, port, jiami(token, password))
+                token = get_token(username, ip, port, use_ssl)
+                login_result = login(username, ip, port, jiami(token, password), use_ssl)
                 public_key = login_result['data']['public_key']
                 token = login_result['data']['token']
                 token = jiami(public_key, token)
                 token_id = login_result['data']['token_id']
                 save_auth_info(ip, port, {'token_id': token_id, 'token': token})
                 # 重新调用 ugreen_notify
-                response_data = ugreen_notify(token_id, token, ip, port)
+                response_data = ugreen_notify(token_id, token, ip, port, use_ssl)
 
             notice_list = response_data.get('data', {}).get('List', [])
             last_timestamp = get_last_timestamp(file_path)
